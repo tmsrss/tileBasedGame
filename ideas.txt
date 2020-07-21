@@ -1,0 +1,52 @@
+Start Screen
+	should have the access to database functions
+	should define settings such as night and debug mode, these also from pause menu
+	pause menu should bring you to start screen
+
+Effects
+
+    particle effects (heal sparkle, smoke)
+    screen shake
+    floating combat text (hits/crits)
+    Level transition
+
+Gameplay
+    Civilians to rescue (if bit they turn!?)
+    items: armor (ammo?)
+    Destructible obstacles (doors / windows)
+    more weapons
+    grenade
+    rocket
+
+Mob improvements
+    mob pathfinding (detect range)
+    Mob states (chasing, roaming)
+
+
+randomize the spawn location using spawn obstacles
+change image when shotgun
+as difficulty and waves increase, the night should switch on, change from switching on with n key. Use hard file first the even harder medium and light. ALso change the NIGHT_COLOR setting, all number higher eg (50, 50, 50) and LIGHT_RADIUS aswell for easier
+As waves go by, boss is needed. The boss can be a subclass of the Mob class.
+can also change lighting/fog/night effect https://www.redblobgames.com/articles/visibility/ to make so the it does not ight up inside of house when close to outside wall
+when spawning items in random locations, should check that when spawning it does not appear on screen.
+	Do this by taking the grid coordinates of the viwable map and check if the randomly selected spawn location is in it. If it is should randomize again.
+
+Alrifai sesh
+subclasses of mobs and also powerupps with different characteristics, such as guns, knives vison arrows...
+mergesort slgorythm
+
+
++instructions on start screen and storyline
+    for storyline show at game start if user is new and has no score saved in database
+        if not have a button on main menu
++waves of hitmen
++possible score saving properties
+    kills to shots ratio
+    kills to time ratio
+    kills highscore
+    wave highscore
+    average wave time
++ammo counter
++gun reloads
++weapon swaps with number button
+
