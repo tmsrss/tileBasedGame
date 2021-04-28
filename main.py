@@ -1,4 +1,3 @@
-
 import random
 import sys
 from os import path
@@ -10,6 +9,7 @@ from game import *
 import mysql.connector
 import hashlib
 from configparser import ConfigParser
+import database
 
 config = ConfigParser()
 
@@ -22,6 +22,7 @@ def start_game():
     g.new()  #is being called by the menu, kept here for logical sense.
     g.run()
     g.show_over_screen()
+    database.update_statistics(LOGGEDIN_PLAYERID, g)
     g.stop()
     main()
 
@@ -94,6 +95,183 @@ def update_menu_sound(value, enabled):
         print('Menu sounds were disabled')
 
 
+def storyline():
+    # -------------------------------------------------------------------------
+    # Globals
+    # -------------------------------------------------------------------------
+    global main_menu
+    global sound
+    global surface
+    global logged_in
+    global storyline_change
+
+    # -------------------------------------------------------------------------
+    # Init pygame
+    # -------------------------------------------------------------------------
+    pygame.init()
+    os.environ['SDL_VIDEO_CENTERED'] = '1'
+
+    # Create pygame screen and initialise objects
+    surface = pygame.display.set_mode(WINDOW_SIZE)
+    pygame.display.set_caption('Storyline')
+    clock = pygame.time.Clock()
+
+    # -------------------------------------------------------------------------
+    # Set sounds
+    # -------------------------------------------------------------------------
+    sound = pygame_menu.sound.Sound()
+
+    # Load example sounds
+    sound.load_example_sounds()
+
+    # Disable a sound
+    sound.set_sound(pygame_menu.sound.SOUND_TYPE_ERROR, None)
+
+    # -------------------------------------------------------------------------
+    # Create menus: Storyline menu
+    # -------------------------------------------------------------------------
+    pygame_menu.themes.THEME_BLUE = pygame_menu.themes.THEME_BLUE.copy()
+    pygame_menu.themes.THEME_BLUE.widget_offset = (0, 0.09)
+    pygame_menu.themes.THEME_BLUE.title_font = pygame_menu.font.FONT_COMIC_NEUE
+    pygame_menu.themes.THEME_BLUE.widget_font = pygame_menu.font.FONT_COMIC_NEUE
+    pygame_menu.themes.THEME_BLUE.widget_font_size = 30
+
+    storyline_menu = pygame_menu.Menu(
+        height=WINDOW_SIZE[1],
+        width=WINDOW_SIZE[0],
+        onclose=pygame_menu.events.EXIT,  # User press ESC button
+        title='Storyline',
+        theme=pygame_menu.themes.THEME_BLUE,
+    )
+
+    STORY = "You are a hacker. \n"\
+            "You have been able to gain access to top-secret government files which have evidence against each parliament member of the world. "\
+            "The FBI, CIA, KGB and INTERPOL are after you, they are sending waves of hitmen trying to kill you. "\
+            "Survive as many waves of hitmen as you can. "\
+            "There are several powerups which you can pick up, including: health and different weapons. "\
+            "Move your character with wasd or arrow keys. "\
+            "Shoot using the space bar. " \
+            "Cycle between different weapons using the 1, 2, 3, number keys. "
+    storyline_menu.add_label(STORY, max_char=-1, font_size=20, selectable=True)
+
+    def back():
+        global storyline_change
+        storyline_menu.disable()
+        storyline_change = False
+
+    storyline_menu.add_button('Back', back)
+    storyline_menu.add_button('Quit', pygame_menu.events.EXIT)
+
+    while True:
+
+        # Tick
+        clock.tick(FPS)
+
+        # Paint background
+        main_background()
+
+        # Main menu
+        storyline_menu.mainloop(surface, main_background, fps_limit=FPS)
+
+        # Flip surface
+        pygame.display.flip()
+
+        if storyline_change == False:
+            main()
+
+
+def satisticsMenu():
+    # -------------------------------------------------------------------------
+    # Globals
+    # -------------------------------------------------------------------------
+    global main_menu
+    global sound
+    global surface
+    global logged_in
+    global stats_menu_change
+    global storyline_change
+
+    # -------------------------------------------------------------------------
+    # Init pygame
+    # -------------------------------------------------------------------------
+    pygame.init()
+    os.environ['SDL_VIDEO_CENTERED'] = '1'
+
+    # Create pygame screen and initialise objects
+    surface = pygame.display.set_mode(WINDOW_SIZE)
+    pygame.display.set_caption('Storyline')
+    clock = pygame.time.Clock()
+
+    # -------------------------------------------------------------------------
+    # Set sounds
+    # -------------------------------------------------------------------------
+    sound = pygame_menu.sound.Sound()
+
+    # Load example sounds
+    sound.load_example_sounds()
+
+    # Disable a sound
+    sound.set_sound(pygame_menu.sound.SOUND_TYPE_ERROR, None)
+
+    # -------------------------------------------------------------------------
+    # Create menus: Storyline menu
+    # -------------------------------------------------------------------------
+    pygame_menu.themes.THEME_BLUE = pygame_menu.themes.THEME_BLUE.copy()
+    pygame_menu.themes.THEME_BLUE.widget_offset = (0, 0.09)
+    pygame_menu.themes.THEME_BLUE.title_font = pygame_menu.font.FONT_COMIC_NEUE
+    pygame_menu.themes.THEME_BLUE.widget_font = pygame_menu.font.FONT_COMIC_NEUE
+    pygame_menu.themes.THEME_BLUE.widget_font_size = 30
+
+    satisticsMenu = pygame_menu.Menu(
+        height=WINDOW_SIZE[1],
+        width=WINDOW_SIZE[0],
+        onclose=pygame_menu.events.EXIT,  # User press ESC button
+        title='Statistics',
+        theme=pygame_menu.themes.THEME_BLUE,
+    )
+
+    def back():
+        global stats_menu_change
+        satisticsMenu.disable()
+        stats_menu_change = False
+
+    def DPS():
+        db = database.display_database()
+        global LOGGEDIN_PLAYERID
+        db.display_personal_statistics(LOGGEDIN_PLAYERID)
+
+    def DU():
+        db = database.display_database()
+        db.display_users()
+
+    def DL():
+        db = database.display_database()
+        db.display_leaderboard()
+
+    satisticsMenu.add_button('|Personal Statistics|', DPS)
+    satisticsMenu.add_button('|Users|', DU)
+    satisticsMenu.add_button('|Leaderboard|', DL)
+    satisticsMenu.add_button('Back', back)
+    satisticsMenu.add_button('Quit', pygame_menu.events.EXIT)
+
+    while True:
+
+        # Tick
+        clock.tick(FPS)
+
+        # Paint background
+        main_background()
+
+        # Main menu
+        satisticsMenu.mainloop(surface, main_background, fps_limit=FPS)
+
+        # Flip surface
+        pygame.display.flip()
+
+        if stats_menu_change == False:
+            main()
+
+
 def main(test=False):
     # -------------------------------------------------------------------------
     # Globals
@@ -102,16 +280,19 @@ def main(test=False):
     global sound
     global surface
     global logged_in
-
+    global storyline_change
+    global stats_menu_change
+    storyline_change = False
+    stats_menu_change = False
     # -------------------------------------------------------------------------
     # Init pygame
     # -------------------------------------------------------------------------
     pygame.init()
     os.environ['SDL_VIDEO_CENTERED'] = '1'
 
-    # Create pygame screen and objects
+    # Create pygame screen and initialise objects
     surface = pygame.display.set_mode(WINDOW_SIZE)
-    pygame.display.set_caption('Example - Multi Input')
+    pygame.display.set_caption('Hitmen run')
     clock = pygame.time.Clock()
 
     # -------------------------------------------------------------------------
@@ -160,7 +341,20 @@ def main(test=False):
         global logged_in
         main_menu.disable()
         logged_in = False
+
+    def change_storyline_menu():
+        global storyline_change
+        main_menu.disable()
+        storyline_change = True
+
+    def stats_menu():
+        global stats_menu_change
+        main_menu.disable()
+        stats_menu_change = True
+
+    main_menu.add_button('Stats', stats_menu)
     main_menu.add_button('Log Out', log_out)
+    main_menu.add_button('Storyline', change_storyline_menu)
     main_menu.add_button('Quit', pygame_menu.events.EXIT)
 
 
@@ -180,6 +374,13 @@ def main(test=False):
 
         if logged_in == False:
             start()
+
+        if storyline_change == True:
+            storyline()
+
+        if stats_menu_change == True:
+            satisticsMenu()
+
 
         # At first loop returns
         #if test:
@@ -300,6 +501,7 @@ def start(test=False):
     log_in_menu.add_text_input('Password: ',
                                password=True,
                                textinput_id='password')
+
     def check_login():
         global logged_in
         data = log_in_menu.get_input_data()
@@ -307,10 +509,10 @@ def start(test=False):
         passhash = hashlib.sha256()
         passhash.update(password.encode('utf-8'))
         passhash = passhash.hexdigest()
-        password = 0
+        password = 0 #clears raw password variable
         db = mysql.connector.connect(host='localhost', user='root', passwd='root', database='tiled_game')
         cursor = db.cursor()
-        sql = 'SELECT password FROM player WHERE username=%s;'
+        sql = 'SELECT password, playerID FROM player WHERE username=%s;'
         val = (username,)
         cursor.execute(sql, val)
         result = cursor.fetchone()
@@ -319,6 +521,9 @@ def start(test=False):
             if dbhash == passhash:
                 log_in_menu.disable()
                 logged_in = True
+                global LOGGEDIN_PLAYERID
+                LOGGEDIN_PLAYERID = result[1]
+                print(LOGGEDIN_PLAYERID)
         except:
             pass
 
@@ -352,11 +557,3 @@ def start(test=False):
 
 if __name__ == '__main__':
     start()
-
-
-
-
-
-
-
-
