@@ -18,8 +18,10 @@ MAGENTA = (255, 0, 255)
 
 
 # window settings
+#WIDTH = 1024  # 16 * 64 or 32 * 32 or 64 * 16
+#HEIGHT = 768  # 16 * 48 or 32 * 24 or 64 * 12
 WIDTH = 1024  # 16 * 64 or 32 * 32 or 64 * 16
-HEIGHT = 768  # 16 * 48 or 32 * 24 or 64 * 12
+HEIGHT = 700  # 16 * 48 or 32 * 24 or 64 * 12
 # WIDTH = 2560
 # HEIGHT = 1080
 FPS = 60
@@ -31,7 +33,9 @@ BGCOLOR = DARKGREY
 TILESIZE = 64
 GRIDWIDTH = WIDTH / TILESIZE
 GRIDHEIGHT = HEIGHT / TILESIZE
-MAP_NAME = "level1.tmx"
+MAP_NAME = "test.tmx"
+PIXEL_WIDTH = 3200
+PIXEL_HEIGHT = 1920
 
 
 # player settings
@@ -43,7 +47,7 @@ PLAYER_IMG = "manBlue_gun.png"
 PLAYER_HIT_RECT = pg.Rect(0, 0, 40, 40)
 
 
-# MObs
+# MOBS
 MOB_FOLDER = "Hitman 1"
 MOB_IMAGE = "hitman1_gun.png"
 MOB_SPEEDS = [75, 100, 125, 150]
@@ -51,8 +55,21 @@ MOB_HIT_RECT = pg.Rect(0, 0, 30, 30)
 MOB_HEALTH = 100
 MOB_DAMAGE = 10
 MOB_KNOCKBACK = 20
+
+
+#GENERAL MOBS+BOSS
 AVOID_RADIUS = 50
-DETECT_RADIUS = 400
+DETECT_RADIUS = 650
+
+
+#BOSS
+BOSS_FOLDER = "Robot 1"
+BOSS_IMAGE = "robot1_hold.png"
+BOSS_SPEEDS = [75, 100, 125, 150]*2
+BOSS_HIT_RECT = pg.Rect(0, 0, 30, 30)
+BOSS_HEALTH = 100
+BOSS_DAMAGE = 10
+BOSS_KNOCKBACK = 20
 
 
 # Wall
@@ -65,7 +82,7 @@ BULLET_IMG = "bullet.png"
 WEAPONS = {}
 WEAPONS["pistol"] = {"speed":500,
                      "lifetime":1000,
-                     "rate":150,
+                     "rate":300,
                      "kickback":200,
                      "spread":5,
                      "damage":10,
@@ -79,14 +96,23 @@ WEAPONS["shotgun"] = {"speed":400,
                        "damage":10,
                        "size": "sm",
                        "count": 12}
+WEAPONS["smg"] = {"speed":600,
+                  "lifetime":1500,
+                  "rate":100,
+                  "kickback":300,
+                  "spread":4,
+                  "damage":20,
+                  "size": "sm",
+                  "count": 1}
 WEAPON_SOUNDS = {"pistol":["pistol.wav"],
-                 "shotgun":["shotgun.wav"]}
+                 "shotgun":["shotgun.wav"],
+                 "smg":["smg.ogg"]}
 BARREL_OFFSET = vec(30, 10)
 SMOKE = ['whitePuff15.png', 'whitePuff16.png',
          'whitePuff17.png', 'whitePuff18.png']
 SMOKE_FOLDER = "Smoke"
 SMOKE_DURATION = 40
-DEFAULT_AMMO = 50
+DEFAULT_AMMO = 5000
 AMMO_RELOAD = 200
 
 
@@ -94,7 +120,9 @@ AMMO_RELOAD = 200
 POWERUPS_FOLDER = "Powerups"
 POWERUPS_IMAGES = {"health":"health_pack.png",
                    "shotgun":"obj_shotgun.png",
-                   'ammo':'ammo_pack.png'}
+                   "ammo":"ammo_pack.png",
+                   "pistol":"weapon_gun.png",
+                   "smg":"weapon_machine.png"}
 HEALTH_PACK_AMOUNT = 20
 BOB_RANGE = 10
 BOB_SPEED = 0.5
@@ -126,4 +154,3 @@ BULLET_LAYER = 3
 MOB_LAYER = 2
 EFFECTS_LAYER = 4
 POWERUPS_LAYER = 1
-
