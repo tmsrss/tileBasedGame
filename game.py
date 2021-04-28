@@ -7,8 +7,9 @@ from sprites import *
 from map import *
 import pytmx
 import pygame_menu as pgm
-from menu import *
-#from main import *
+from random import uniform, choice, randint
+
+
 
 
 def draw_player_health(surf, x, y, pct):
@@ -41,6 +42,7 @@ class Game:
         pg.key.set_repeat(500, 100)
         self.running = True
         self.paused = False
+        self.wave = 0
 
     def draw_text(self, text, font_name, size, color, x, y, align="nw"):
         font = pg.font.Font(font_name, size)
@@ -85,12 +87,19 @@ class Game:
             player_folder = img_folder
         self.player_img = pg.image.load(path.join(player_folder, PLAYER_IMG))
 
-        # mob
+        #mob
         if MOB_FOLDER is not False:
             mob_folder = path.join(img_folder, MOB_FOLDER)
         else:
             mob_folder = img_folder
         self.mob_img = pg.image.load(path.join(mob_folder, MOB_IMAGE))
+
+        #boss
+        if BOSS_FOLDER is not False:
+            boss_folder = path.join(img_folder, BOSS_FOLDER)
+        else:
+            boss_folder = img_folder
+        self.boss_img = pg.image.load(path.join(boss_folder, BOSS_IMAGE))
 
         #wall
         if WALL_FOLDER is not False:
@@ -160,9 +169,11 @@ class Game:
 
     def new(self):
         # start a new game
+        self.hitman_spawn_locations = []
         self.all_sprites = pg.sprite.LayeredUpdates()
         self.walls = pg.sprite.Group()
         self.mobs = pg.sprite.Group()
+        self.bosses = pg.sprite.Group()
         self.bullets = pg.sprite.Group()
         self.powerups = pg.sprite.Group()
         # load map
@@ -180,21 +191,25 @@ class Game:
         #             Mob(self, col, row)
         for tile_object in self.map.tmxdata.objects:
             obj_center = vec(tile_object.x + tile_object.width/2, tile_object.y + tile_object.height/2)
-            print(tile_object.name)
             if tile_object.name == "player":
                 self.player = Player(self, obj_center.x, obj_center.y)
-            elif tile_object.name == "zombie":
-                Mob(self, obj_center.x, obj_center.y)
+            elif tile_object.name == "hitman":
+                #print("dio can")
+                #Mob(self, obj_center.x, obj_center.y)
+                self.hitman_spawn_locations.append(pg.Rect(obj_center.x, obj_center.y, 49, 43))
             elif tile_object.name == "wall":
                 Obstacle(self, tile_object.x, tile_object.y,
                          tile_object.width, tile_object.height)
-            elif tile_object.name in ["health", "shotgun", 'ammo']:
-                Powerup(self, obj_center, tile_object.name)
+            elif tile_object.name == "powerup" :
+                choice = random.choice(["health", "shotgun", 'ammo', 'smg'])
+                Powerup(self, obj_center, choice)
         self.camera = Camera(self.map.width, self.map.height)
         self.draw_debug = False
         self.effects_sounds["level_start"].play()
         self.paused = False
         self.night = False
+        self.countdown_timer = 0
+        self.flag = False
 
     def run(self):
         # game loop
@@ -207,13 +222,51 @@ class Game:
                 self.update()
             self.draw()
 
+    def new_wave(self):
+        used_locations = []
+        x = self.wave
+        num_hitmen = 20*x
+        usable_locations = self.hitman_spawn_locations
+        # spawn new hitmen
+        camera_rect = self.camera.get_rect()
+        unusable_locations = camera_rect.collidelistall(usable_locations)  # returns a list of indexes
+        #print(usable_locations)
+        for index in sorted(unusable_locations, reverse=True):
+            del usable_locations[index]
+        #print(usable_locations)
+        for y in range(num_hitmen):
+            #flag = False
+            location = choice(usable_locations)
+            location_center_x = location.centerx
+            location_center_y = location.centery
+            location = [location_center_x, location_center_y]
+            if location not in used_locations:
+                used_locations.append(location)
+                Mob(self, location_center_x, location_center_y)
+            else:
+                location_center_x = location_center_x+random.randint(40,80)
+                location_center_y = location_center_y+random.randint(40,80)
+                location = [location_center_x, location_center_y]
+                Mob(self, location_center_x, location_center_y)
+        Boss(self, 1200, 1200)
+        print(self.player.hit_rect.centerx)
+        print(self.player.hit_rect.centery)
+
     def update(self):
         # game loop update
         self.all_sprites.update()
         self.camera.update(self.player)
-        # game over
+        # new wave
         if len(self.mobs) == 0:
-            self.playing = False
+            if self.flag == False:
+                self.countdown_timer = 0
+                self.flag = True
+            self.countdown_timer -= self.dt
+            if self.countdown_timer <= 0:
+                self.wave += 1
+                self.flag = False
+                self.new_wave()
+
         # player picks up items
         picks = pg.sprite.spritecollide(self.player, self.powerups, False)
         for pick in picks:
@@ -222,9 +275,16 @@ class Game:
                 pick.kill()
                 self.player.add_health(HEALTH_PACK_AMOUNT)
             if pick.type == "shotgun":
-                self.effects_sounds['gun_pickup']
+                self.effects_sounds['gun_pickup'].play()
                 pick.kill()
-                self.player.weapon = 'shotgun'
+                if "shotgun" not in self.player.backpack:
+                    self.player.backpack.append('shotgun')
+            if pick.type == "smg":
+                self.effects_sounds['gun_pickup'].play()
+                pick.kill()
+                if "smg" not in self.player.backpack:
+                    self.player.backpack.append('smg')
+
                 # add the shotgun to the self.player.weaponlist
             if pick.type == 'ammo':
                 # ammo sound effect
@@ -288,6 +348,8 @@ class Game:
         for sprite in self.all_sprites:
             if isinstance(sprite, Mob):
                 sprite.draw_health()
+                #print(sprite.pos)
+                #print(self.mobs)
             self.screen.blit(sprite.image, self.camera.apply(sprite))
             if self.draw_debug == True:
                 pg.draw.rect(self.screen, CYAN, self.camera.apply_rect(sprite.hit_rect), 1)
@@ -296,16 +358,42 @@ class Game:
                 pg.draw.rect(self.screen, MAGENTA, self.camera.apply_rect(wall.rect), 1)
         if self.night == True:
             self.render_fog()
+
+        #pg.draw.rect(self.screen, RED, self.camera.get_rect(), 20)
         #HUD below
         # self.draw_grid()
         draw_player_health(self.screen, 10, 10, self.player.health/PLAYER_HEALTH)
-        self.draw_text("Hitmans: {}".format(len(self.mobs)), self.hud_font, 30,
+        self.draw_text("Hitmen: {}".format(len(self.mobs)), self.hud_font, 30,
                        WHITE, WIDTH-10, 10, align='ne')
         self.draw_text('AMMO: {}'.format(self.player.ammo), self.hud_font, 25,
-                       WHITE, WIDTH/2, HEIGHT-40, align='center')
+                       WHITE, WIDTH/1.1, HEIGHT-40, align='center')
+        # -----------------------------------------------------------------------------
+        # Draw weapon selection
+        # -----------------------------------------------------------------------------
+        num_weapons = len(self.player.backpack)
+        box_width = num_weapons * 80
+        box_start = (WIDTH/2)-(box_width/2)
+        for i in range(num_weapons):
+            image = self.powerups_images[self.player.backpack[i]]
+            locx = box_start+(80*i)
+            locy = HEIGHT-40
+            self.screen.blit(image, (locx, locy))
+            if self.player.backpack[i] == self.player.weapon:
+                rect = image.get_rect()
+                rect = pg.Rect.move(rect, locx, locy)
+                pg.draw.rect(self.screen, MAGENTA, rect, 1)
+        # -----------------------------------------------------------------------------
+        #   Pause writing
+        # -----------------------------------------------------------------------------
         if self.paused:
             self.screen.blit(self.dim_screen, (0, 0))
             self.draw_text("Paused", self.title_font, 105, RED, WIDTH/2, HEIGHT/2, align="center")
+        # -----------------------------------------------------------------------------
+        #   Next wave countdown
+        # -----------------------------------------------------------------------------
+        if self.flag:
+            self.draw_text("New wave in: {}".format(int(self.countdown_timer)), self.hud_font, 100, RED, WIDTH / 2,
+                           HEIGHT / 8, align="center")
 
         # flip after drawing everything
         pg.display.flip()
@@ -333,7 +421,7 @@ class Game:
         self.screen.fill(BLACK)
         self.draw_text('GAME OVER', self.title_font, 100,
                        GREEN, WIDTH/2, HEIGHT/2, align='center')
-        self.draw_text('Press any key to start', self.title_font, 75,
+        self.draw_text('Press any key to save game', self.title_font, 75,
                        CYAN, WIDTH/2, HEIGHT*3/4, align='center')
         pg.display.flip()
         self.wait_key()
