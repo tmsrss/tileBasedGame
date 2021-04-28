@@ -47,9 +47,11 @@ class Player(pg.sprite.Sprite):
         self.rot = 0
         self.last_shot = 0
         self.health = PLAYER_HEALTH
+        self.backpack = ["pistol"]
         self.weapon = "pistol"
         self.damaged = False
         self.ammo = DEFAULT_AMMO
+        self.kill_count = 0
 
     def hit(self):
         self.damaged = True
@@ -69,6 +71,18 @@ class Player(pg.sprite.Sprite):
             self.vel = vec(-PLAYER_SPEED / 2, 0).rotate(-self.rot)
         if keys[pg.K_SPACE]:
             self.shoot()
+        if keys[pg.K_1] or keys[pg.K_KP1]:
+            self.weapon = self.backpack[0]
+        if keys[pg.K_2] or keys[pg.K_KP2]:
+            try:
+                self.weapon = self.backpack[1]
+            except:
+                pass
+        if keys[pg.K_3] or keys[pg.K_KP3]:
+            try:
+                self.weapon = self.backpack[2]
+            except:
+                pass
 
     def shoot(self):
         now = pg.time.get_ticks()
@@ -88,7 +102,7 @@ class Player(pg.sprite.Sprite):
                 self.ammo -= 1
                 MuzzleFlash(self.game, pos)
 
-    def update(self, *args):
+    def update(self):
         self.get_keys()
         self.rot = (self.rot +self.rot_speed * self.game.dt) % 360
         self.image = pg.transform.rotate(self.game.player_img, self.rot)
@@ -97,7 +111,6 @@ class Player(pg.sprite.Sprite):
                 self.image.fill((255, 0, 0, next(self.damage_alpha)), special_flags=pg.BLEND_RGBA_MULT)
             except:
                 self.damaged = False
-
         self.rect = self.image.get_rect()
         self.rect.center = self.pos
         self.pos += self.vel * self.game.dt
@@ -111,6 +124,9 @@ class Player(pg.sprite.Sprite):
         self.health += amount
         if self.health >= PLAYER_HEALTH:
             self.health = PLAYER_HEALTH
+
+    def get_kills(self):
+        return self.kill_count
 
 
 class Mob(pg.sprite.Sprite):
@@ -131,27 +147,34 @@ class Mob(pg.sprite.Sprite):
          self.health = MOB_HEALTH
          self.speed = choice(MOB_SPEEDS)
          self.target = game.player
+         self.image_file = self.game.mob_img
 
     def avoid_mobs(self):
         for mob in self.game.mobs:
             if mob != self:
                 dist = self.pos - mob.pos
-                if 0 < dist.length() < AVOID_RADIUS:
+                if dist == 0:
+                    positionx = mob.pos.x
+                    positiony = mob.pos.y
+                    #mob.pos = vec(positionx+(random.randrange(600, 2000, 600, Type=int), positiony+(random.randrange(600, 2000, 600, Type=int))))
+                    mob.pos = vec(1020, 400)
+                    dist = self.pos - mob.pos
+                if 0.1 < dist.length() < AVOID_RADIUS:
                     self.acc += dist.normalize()
         for wall in self.game.walls:
             dist = self.pos - wall.pos
-            if 0 < dist.length() < AVOID_RADIUS:
+            if 0.1 < dist.length() < AVOID_RADIUS:
                 self.acc += dist.normalize()
 
     def update(self, *args):
         target_dist = self.target.pos - self.pos
         if target_dist.length_squared() < DETECT_RADIUS**2:
             self.rot = target_dist.angle_to(vec(1, 0))
-            self.image = pg.transform.rotate(self.game.mob_img, self.rot)
+            self.image = pg.transform.rotate(self.image_file, self.rot)
             self.rect = self.image.get_rect()
             self.rect.center = self.pos
             self.acc = vec(1, 0).rotate(-self.rot)
-            self.avoid_mobs()
+            #self.avoid_mobs()
             self.acc.scale_to_length(self.speed)
             self.acc += self.vel * -1
             self.vel+= self.acc *self.game.dt
@@ -167,6 +190,8 @@ class Mob(pg.sprite.Sprite):
             choice(self.game.zombie_hit_sounds).play()
             self.kill()
             self.game.map_img.blit(self.game.splat, self.pos - vec(32, 32))
+            self.target.kill_count+=1
+            print(self.target.kill_count)
 
     def draw_health(self):
         if self.health > 60:
@@ -181,18 +206,25 @@ class Mob(pg.sprite.Sprite):
             pg.draw.rect(self.image, col, self.health_bar)
 
 
+class Boss(Mob):
+    def __init__(self, game, x, y):
+        Mob.__init__(self, game, x, y)
+        self.image = game.boss_img.copy()
+        self.image_file = self.game.boss_img
+
+
 class Obstacle(pg.sprite.Sprite):
-     def __init__(self, game, x, y, w, h):
-         self.groups = game.walls
-         pg.sprite.Sprite.__init__(self, self.groups)
-         self.game = game
-         self.image = game.wall_img
-         self.rect = pg.Rect(x, y, w, h)
-         self.x = x
-         self.y = y
-         self.pos = vec(x, y)
-         self.rect.x = x
-         self.rect.y = y
+    def __init__(self, game, x, y, w, h):
+        self.groups = game.walls
+        pg.sprite.Sprite.__init__(self, self.groups)
+        self.game = game
+        self.image = game.wall_img
+        self.rect = pg.Rect(x, y, w, h)
+        self.x = x
+        self.y = y
+        self.pos = vec(x, y)
+        self.rect.x = x
+        self.rect.y = y
 
 
 class Bullet(pg.sprite.Sprite):
@@ -277,6 +309,24 @@ class Powerup(pg.sprite.Sprite):
             self.step = 0
             self.dir *= -1
 
+
+class WaveCounter(pg.sprite.Sprite):
+    def __init__(self, game, time_until):
+        self.groups = game.all_sprites
+        pg.sprite.Sprite.__init__(self, self.groups)
+        self.rect = self.image.get_rect(topleft=(10, 10))
+        game.draw_text(f'new wave in {time_until}', game.title_font, 105, RED, WIDTH / 2, HEIGHT / 2, align="center")
+        self.timer = time_until * 1000
+        self.game = game
+
+    def update(self):
+        self.timer -= self.game.dt
+        self.game.draw_text(f'new wave in {int(self.timer / 1000) + 1}', self.game.title_font, 105, RED, WIDTH / 2, HEIGHT / 2, align="center")
+        if self.timer <= 0:
+            self.game.new_wave()
+            self.kill()
+
+
 '''
 class Button():
 	def __init__(self, color, x, y, width, height, text=""):
@@ -303,4 +353,3 @@ class Button():
 				return True
 		return False
 '''
-
